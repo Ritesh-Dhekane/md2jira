@@ -1,0 +1,7 @@
+{
+  "site": "your-team.atlassian.net",
+  "project": "ABC",
+  "epicType": "Epic",
+  "ticketType": "Story",
+  "points": { "S": 1, "M": 2, "L": 3 }
+}

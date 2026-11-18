@@ -1,0 +1,7 @@
+node_modules
+.env
+.env.*
+!.env.example
+md2jira.config.json
+.md2jira-state.json
+.DS_Store

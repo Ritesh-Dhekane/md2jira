@@ -1,0 +1,13 @@
+{
+  "name": "md2jira",
+  "version": "0.1.0",
+  "description": "Create Jira Cloud epics and tickets from a Markdown plan.",
+  "type": "module",
+  "license": "MIT",
+  "bin": { "md2jira": "bin/md2jira.mjs" },
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test"
+  },
+  "files": ["bin", "src", "examples"]
+}
