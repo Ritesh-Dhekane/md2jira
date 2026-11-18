@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { parse } from "../src/parse.mjs";
+import { parse, matchesOnly } from "../src/parse.mjs";
 import { ticketDescription } from "../src/adf.mjs";
 
 const plan = readFileSync(new URL("../examples/plan.md", import.meta.url), "utf8");
@@ -37,4 +37,11 @@ test("ticket without description or criteria still gets a description", () => {
   const [epic] = parse("## E\n- **Bare ticket (S).**");
   const d = ticketDescription(epic.tickets[0]);
   assert.equal(d.content[0].content[0].text, "Bare ticket");
+});
+
+test("--only matches whole epic names, not prefixes of longer ones", () => {
+  assert.equal(matchesOnly("E1 Foundation", "E1"), true);
+  assert.equal(matchesOnly("E10 Payments", "E1"), false);
+  assert.equal(matchesOnly("Storefront", "storefront"), true);
+  assert.equal(matchesOnly("Anything", undefined), true);
 });

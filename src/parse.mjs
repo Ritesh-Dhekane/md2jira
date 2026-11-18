@@ -57,3 +57,11 @@ export function parse(md, points = DEFAULT_POINTS) {
 
   return epics.filter((e) => e.tickets.length > 0);
 }
+
+/** `--only "E1"` matches the epic "E1 Foundation" but not "E10 Payments". */
+export function matchesOnly(title, only) {
+  if (!only) return true;
+  const t = title.toLowerCase();
+  const o = only.toLowerCase();
+  return t === o || t.startsWith(`${o} `);
+}

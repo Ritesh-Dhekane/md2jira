@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>md2jira: Markdown plan to Jira epics and tickets</title>
+<meta name="description" content="Write your plan once in Markdown, dry-run it, then create every Jira Cloud epic and ticket in one go. Zero dependencies, MIT licensed.">
+<meta name="theme-color" content="#0b1220">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232563eb'/%3E%3Cpath d='M8 22V10l8 8 8-8v12' fill='none' stroke='white' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f6f8fc;--panel:#fff;--ink:#0f172a;--mut:#475569;--line:#dbe3ef;--accent:#2563eb;--accent-ink:#fff;
+  --epic:#7c3aed;--story:#16a34a;--code:#0b1220;--code-ink:#e2e8f0;--c-h:#93c5fd;--c-b:#fbbf24;--c-ac:#86efac;--c-g:#94a3b8;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b1220;--panel:#111a2e;--ink:#e8eef9;--mut:#9fb0cb;--line:#22304d;--accent:#60a5fa;--accent-ink:#06101f;--epic:#a78bfa;--story:#4ade80;--code:#070d19;
+}}
+:root[data-theme="dark"]{--bg:#0b1220;--panel:#111a2e;--ink:#e8eef9;--mut:#9fb0cb;--line:#22304d;--accent:#60a5fa;--accent-ink:#06101f;--epic:#a78bfa;--story:#4ade80;--code:#070d19}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+code,pre,.mono{font-family:ui-monospace,"Cascadia Code",Consolas,Menlo,monospace}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+header.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;gap:20px;height:60px}
+.logo{font-weight:800;letter-spacing:-.02em;text-decoration:none;color:var(--ink);display:flex;align-items:center;gap:10px}
+.logo i{width:26px;height:26px;border-radius:7px;background:var(--accent);display:grid;place-items:center}
+.logo svg{width:16px;height:16px}
+nav.links{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+nav.links a{padding:6px 10px;border-radius:8px;text-decoration:none;color:var(--mut);font-size:15px}
+nav.links a:hover{background:var(--panel);color:var(--ink)}
+#theme{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer;font:600 13px system-ui}
+
+.hero{padding:72px 0 28px;text-align:center}
+.hero h1{margin:0 0 14px;font-size:clamp(36px,6vw,64px);line-height:1.05;letter-spacing:-.035em}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--accent),var(--epic));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{max-width:640px;margin:0 auto 26px;color:var(--mut);font-size:20px}
+.cmd{display:inline-flex;align-items:center;gap:10px;background:var(--code);color:var(--code-ink);padding:10px 12px 10px 16px;border-radius:12px;font-size:15px;max-width:100%}
+.cmd code{overflow:auto;white-space:nowrap}
+.cmd button{border:0;border-radius:8px;padding:6px 10px;background:#1e293b;color:#e2e8f0;cursor:pointer;font:600 13px system-ui}
+.cta{display:flex;gap:12px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+.btn{display:inline-block;padding:11px 18px;border-radius:10px;font-weight:700;text-decoration:none;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.btn.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+.demo{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:36px 0 12px}
+.pane{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;min-height:360px;display:flex;flex-direction:column}
+.pane h2{margin:0;padding:10px 16px;font:700 13px system-ui;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+#ed{margin:0;background:var(--code);color:var(--code-ink);padding:16px;font-size:14px;line-height:1.7;flex:1;overflow:hidden;white-space:pre-wrap;word-break:break-word}
+#ed .h{color:var(--c-h);font-weight:700}#ed .t{color:var(--c-b)}#ed .a{color:var(--c-ac)}#ed .g{color:var(--c-g)}
+#ed .cur{display:inline-block;width:8px;height:1em;background:var(--accent);vertical-align:-2px;animation:blink 1s steps(2) infinite}
+@keyframes blink{to{opacity:0}}
+#board{padding:14px;display:flex;flex-direction:column;gap:8px;flex:1;overflow:hidden}
+.card{border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:10px;font-size:15px;animation:pop .35s ease both;background:var(--bg)}
+.card.epic{border-left:5px solid var(--epic);font-weight:700}
+.card.story{margin-left:26px;border-left:5px solid var(--story)}
+.card .k{font:700 12px ui-monospace,Consolas,monospace;color:var(--mut)}
+.card .pt{margin-left:auto;background:var(--line);border-radius:99px;padding:1px 9px;font:700 12px system-ui}
+.card .ac{font-size:12px;color:var(--mut)}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+.status{text-align:center;color:var(--mut);font-size:14px;min-height:22px}
+
+section{padding:44px 0}
+section h2.s{font-size:30px;letter-spacing:-.02em;margin:0 0 6px}
+section>.wrap>p.lead{color:var(--mut);margin:0 0 22px;max-width:680px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;counter-reset:s}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;counter-increment:s}
+.step::before{content:counter(s);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-weight:800;margin-bottom:10px}
+.step h3{margin:0 0 4px;font-size:18px}.step p{margin:0;color:var(--mut);font-size:15px}
+pre.block{background:var(--code);color:var(--code-ink);border-radius:12px;padding:16px;overflow:auto;font-size:14px;line-height:1.6;margin:10px 0 16px}
+table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:15px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut)}
+tr:last-child td{border-bottom:0}
+td code,p code,li code{background:color-mix(in srgb,var(--accent) 14%,transparent);padding:1px 6px;border-radius:5px;font-size:.9em}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.note{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:10px;padding:12px 16px;margin:14px 0}
+details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:10px}
+summary{cursor:pointer;font-weight:700}
+details p{margin:8px 0 0;color:var(--mut)}
+footer{border-top:1px solid var(--line);padding:28px 0 44px;color:var(--mut);font-size:15px;text-align:center}
+
+@media (max-width:820px){.demo,.steps,.two{grid-template-columns:1fr}.hero{padding-top:44px}nav.links a.hide{display:none}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.card{animation:none}#ed .cur{animation:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="logo" href="#top"><i aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M2 12V4l6 6 6-6v8" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></i>md2jira</a>
+  <nav class="links" aria-label="Page sections">
+    <a href="#quickstart">Quick start</a><a href="#format">Plan format</a><a class="hide" href="#options">Options</a><a class="hide" href="#faq">FAQ</a>
+    <a href="https://github.com/Ritesh-Dhekane/md2jira" target="_blank" rel="noopener">GitHub</a>
+  </nav>
+  <button id="theme" type="button" aria-label="Switch colour theme">Theme</button>
+</div></header>
+
+<main id="top">
+<div class="wrap">
+  <div class="hero">
+    <h1>Plan in Markdown.<br><em>Ship it to Jira.</em></h1>
+    <p>Write your epics and tickets once as a plain Markdown file. Dry-run it, then create everything in Jira Cloud in one go, with acceptance criteria and story points.</p>
+    <div class="cmd"><code id="cmdtext">node bin/md2jira.mjs plan.md</code><button id="copy" type="button">Copy</button></div>
+    <div class="cta"><a class="btn p" href="#quickstart">Quick start</a><a class="btn" href="https://github.com/Ritesh-Dhekane/md2jira" target="_blank" rel="noopener">View on GitHub</a></div>
+  </div>
+
+  <div class="demo" aria-label="Animated example of a Markdown plan turning into Jira issues">
+    <div class="pane"><h2><span>plan.md</span><span class="mono">markdown</span></h2><pre id="ed" aria-hidden="true"></pre></div>
+    <div class="pane"><h2><span>Jira board</span><span class="mono">AC</span></h2><div id="board"></div></div>
+  </div>
+  <p class="status" id="status" role="status"></p>
+</div>
+
+<section id="how"><div class="wrap">
+  <h2 class="s">How it works</h2>
+  <p class="lead">Three steps, and a dry run so nothing happens until you say so.</p>
+  <div class="steps">
+    <div class="step"><h3>Write a plan</h3><p>Headings are epics. Bullets are tickets. A size like <code>(M)</code> becomes story points.</p></div>
+    <div class="step"><h3>Dry run</h3><p>See how many epics and tickets it found. Nothing is written to Jira.</p></div>
+    <div class="step"><h3>Apply</h3><p>Epics and stories are created and linked. Re-runs skip what exists, so there are no duplicates.</p></div>
+  </div>
+</div></section>
+
+<section id="quickstart"><div class="wrap">
+  <h2 class="s">Quick start</h2>
+  <p class="lead">Node 22 or newer. Nothing to install.</p>
+  <div class="two"><div>
+    <h3>1. Get the code</h3>
+<pre class="block">git clone https://github.com/Ritesh-Dhekane/md2jira
+cd md2jira</pre>
+    <h3>2. Create an API token</h3>
+    <p>Open <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener">id.atlassian.com → Security → API tokens</a>, choose <strong>Create API token</strong> (not the scoped variant) and set a short expiry.</p>
+    <h3>3. Add credentials</h3>
+<pre class="block"># .env  (git-ignored)
+JIRA_EMAIL=the-email-you-log-into-atlassian-with
+JIRA_TOKEN=the-token</pre>
+  </div><div>
+    <h3>4. Add a config file</h3>
+<pre class="block">// md2jira.config.json
+{
+  "site": "your-team.atlassian.net",
+  "project": "ABC",
+  "epicType": "Epic",
+  "ticketType": "Story",
+  "points": { "S": 1, "M": 2, "L": 3 }
+}</pre>
+    <h3>5. Run it</h3>
+<pre class="block"># dry run: prints what it would create
+node bin/md2jira.mjs plan.md
+
+# real test: a couple of issues
+node bin/md2jira.mjs plan.md --apply --only "Storefront" --max 2
+
+# everything
+node bin/md2jira.mjs plan.md --apply</pre>
+  </div></div>
+  <div class="note">The token is read only from the environment or <code>.env</code>. Keep <code>.env</code> out of version control.</div>
+</div></section>
+
+<section id="format"><div class="wrap">
+  <h2 class="s">Plan format</h2>
+  <p class="lead">Plain Markdown. Anything the parser does not recognise is ignored.</p>
+<pre class="block">## Storefront (3 days)
+Goal: visitors can see the menu.
+
+- **Menu page (M).** Show each drink with a price.
+  - AC: every drink has a price.
+  - AC: the page works at phone width.
+- **Map and hours (S).** Embed a map.
+
+---
+
+## Notes
+Sections without tickets are skipped.</pre>
+  <table>
+    <tr><th>Markdown</th><th>Becomes</th></tr>
+    <tr><td><code>## Title (3 days)</code></td><td>An epic. A trailing <code>(N days)</code> is dropped.</td></tr>
+    <tr><td>First plain line under it</td><td>The epic description (<code>Goal:</code> is stripped).</td></tr>
+    <tr><td><code>- **Title (M).** text</code></td><td>A story under that epic. <code>M</code> becomes points if it is a key of <code>points</code>.</td></tr>
+    <tr><td><code>&nbsp;&nbsp;- AC: …</code></td><td>An item in the "Acceptance criteria" list.</td></tr>
+    <tr><td><code>---</code></td><td>Ends the current epic.</td></tr>
+  </table>
+</div></section>
+
+<section id="options"><div class="wrap">
+  <h2 class="s">Options</h2>
+  <table>
+    <tr><th>Option</th><th>Meaning</th></tr>
+    <tr><td><code>--apply</code></td><td>Actually create the issues. Without it nothing is written.</td></tr>
+    <tr><td><code>--only "text"</code></td><td>Only the epic whose title is, or starts with, the text as whole words. <code>E1</code> does not match <code>E10</code>.</td></tr>
+    <tr><td><code>--max N</code></td><td>Stop after creating N issues.</td></tr>
+    <tr><td><code>--fix-points</code></td><td>Also set story points on tickets created by an earlier run.</td></tr>
+    <tr><td><code>--config file</code></td><td>Config path. Default <code>md2jira.config.json</code> in the current folder.</td></tr>
+    <tr><td><code>--state file</code></td><td>Where created keys are remembered. Default <code>.md2jira-state.json</code>.</td></tr>
+  </table>
+</div></section>
+
+<section id="faq"><div class="wrap">
+  <h2 class="s">FAQ</h2>
+  <details><summary>Team-managed or company-managed spaces?</summary><p>Both work. Stories are linked to their epic with the <code>parent</code> field.</p></details>
+  <details><summary>Why are my story points empty?</summary><p>If the story-points field is not on the create screen, points are set right after creating. If Jira refuses that too, add the field to the issue layout of the work type, then run again with <code>--fix-points</code>.</p></details>
+  <details><summary>Will a re-run create duplicates?</summary><p>No. Created keys are saved in the state file and skipped. Edits to a ticket that already exists are not pushed to Jira.</p></details>
+  <details><summary>Where does my token go?</summary><p>Only into your environment or a local <code>.env</code>. It is never written to the config or state files.</p></details>
+</div></section>
+</main>
+
+<footer><div class="wrap">md2jira is open source under the <a href="https://github.com/Ritesh-Dhekane/md2jira/blob/prod/LICENSE" target="_blank" rel="noopener">MIT license</a>. · <a href="https://github.com/Ritesh-Dhekane/md2jira" target="_blank" rel="noopener">Source on GitHub</a></div></footer>
+
+<script>
+(function(){
+  var d=document,r=d.documentElement;
+  try{var t=localStorage.getItem('m2j-theme');if(t)r.setAttribute('data-theme',t)}catch(e){}
+  d.getElementById('theme').onclick=function(){
+    var dark=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme:dark)').matches);
+    var n=dark?'light':'dark';r.setAttribute('data-theme',n);try{localStorage.setItem('m2j-theme',n)}catch(e){}
+  };
+  var copy=d.getElementById('copy');
+  copy.onclick=function(){
+    var txt=d.getElementById('cmdtext').textContent;
+    (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(function(){copy.textContent='Copied'},function(){copy.textContent='Press Ctrl+C'});
+    setTimeout(function(){copy.textContent='Copy'},1600);
+  };
+
+  var script=[
+    {k:'h',t:'## Storefront (3 days)',epic:'Storefront'},
+    {k:'g',t:'Goal: visitors can see the menu.'},
+    {k:'t',t:'- **Menu page (M).** Show each drink with a price.',story:'Menu page',pts:2},
+    {k:'a',t:'  - AC: every drink has a price.',ac:true},
+    {k:'t',t:'- **Map and hours (S).** Embed a map.',story:'Map and hours',pts:1},
+    {k:'h',t:'## Orders (2 days)',epic:'Orders'},
+    {k:'t',t:'- **Reservation form (L).** Name, drink, pickup time.',story:'Reservation form',pts:3}
+  ];
+  var ed=d.getElementById('ed'),board=d.getElementById('board'),status=d.getElementById('status');
+  var reduce=matchMedia('(prefers-reduced-motion:reduce)').matches,n,lastStory,lastAc,timer;
+
+  function card(cls,key,title,pts){
+    var c=d.createElement('div');c.className='card '+cls;
+    var k=d.createElement('span');k.className='k';k.textContent=key;
+    var s=d.createElement('span');s.textContent=title;
+    c.appendChild(k);c.appendChild(s);
+    if(pts){var p=d.createElement('span');p.className='pt';p.textContent=pts+' pt';c.appendChild(p)}
+    board.appendChild(c);return c;
+  }
+  function done(line){
+    if(line.epic){n++;card('epic','DEMO-'+n,line.epic);lastStory=null}
+    else if(line.story){n++;lastStory=card('story','DEMO-'+n,line.story,line.pts);lastAc=0}
+    else if(line.ac&&lastStory){
+      lastAc++;var a=lastStory.querySelector('.ac');
+      if(!a){a=d.createElement('span');a.className='ac';lastStory.insertBefore(a,lastStory.querySelector('.pt'))}
+      a.textContent=lastAc+' criterion'+(lastAc>1?'s':'');
+    }
+  }
+  function lineEl(line){var s=d.createElement('div');s.className=line.k;ed.appendChild(s);return s}
+  function reset(){ed.textContent='';board.textContent='';n=0;lastStory=null;status.textContent=''}
+  function play(){
+    reset();var i=0;
+    (function next(){
+      if(i>=script.length){status.textContent='5 issues from a few lines of Markdown. Dry run first, then --apply.';timer=setTimeout(play,4200);return}
+      var line=script[i++],el=lineEl(line),j=0,cur=d.createElement('span');cur.className='cur';
+      (function type(){
+        if(j<line.t.length){el.textContent=line.t.slice(0,++j);el.appendChild(cur);timer=setTimeout(type,16)}
+        else{cur.remove();done(line);timer=setTimeout(next,260)}
+      })();
+    })();
+  }
+  if(reduce){
+    script.forEach(function(l){lineEl(l).textContent=l.t;done(l)});
+    status.textContent='5 issues from a few lines of Markdown. Dry run first, then --apply.';
+  }else{
+    reset();play();
+    d.addEventListener('visibilitychange',function(){if(d.hidden){clearTimeout(timer)}else{play()}});
+  }
+})();
+</script>
+</body>
+</html>
