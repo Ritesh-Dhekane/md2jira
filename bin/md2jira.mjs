@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { parse, DEFAULT_POINTS } from "../src/parse.mjs";
+import { parse, matchesOnly, DEFAULT_POINTS } from "../src/parse.mjs";
 import { createClient, importPlan } from "../src/jira.mjs";
 
-const USAGE = `Usage: md2jira <plan.md> [--apply] [--only "<epic title text>"] [--max N] [--config file] [--state file]
+const USAGE = `Usage: md2jira <plan.md> [--apply] [--only "<epic title start>"] [--max N] [--fix-points] [--config file] [--state file]
 Dry run unless --apply. Credentials: JIRA_EMAIL and JIRA_TOKEN (environment or .env).`;
 
 const args = process.argv.slice(2);
@@ -33,9 +33,7 @@ const settings = {
 };
 
 const only = flag("--only")?.toLowerCase();
-const epics = parse(readFileSync(resolve(file), "utf8"), settings.points).filter(
-  (e) => !only || e.title.toLowerCase().includes(only),
-);
+const epics = parse(readFileSync(resolve(file), "utf8"), settings.points).filter((e) => matchesOnly(e.title, only));
 const ticketCount = epics.reduce((n, e) => n + e.tickets.length, 0);
 console.log(`Parsed ${epics.length} epics, ${ticketCount} tickets.`);
 for (const e of epics) console.log(`  ${e.title}: ${e.tickets.length}`);
@@ -60,5 +58,6 @@ const made = await importPlan({
   ticketType: settings.ticketType,
   statePath: resolve(flag("--state") ?? ".md2jira-state.json"),
   max,
+  fixPoints: args.includes("--fix-points"),
 });
 console.log(`Created ${made} issues.`);

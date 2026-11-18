@@ -25,7 +25,7 @@ export function createClient({ site, email, token }) {
  * Creates the epics and their tickets. Anything already in the state file is skipped,
  * so a re-run (or a run after `--max`) never creates duplicates.
  */
-export async function importPlan({ jira, epics, project, epicType, ticketType, statePath, max = Infinity, log = console.log }) {
+export async function importPlan({ jira, epics, project, epicType, ticketType, statePath, max = Infinity, fixPoints = false, log = console.log }) {
   const state = existsSync(statePath) ? JSON.parse(readFileSync(statePath, "utf8")) : {};
   const save = () => writeFileSync(statePath, JSON.stringify(state, null, 2));
 
@@ -37,22 +37,40 @@ export async function importPlan({ jira, epics, project, epicType, ticketType, s
 
   const fields = await jira("/field");
   const pointsField = fields.find((f) => /^story point/i.test(f.name));
-  let usePoints = Boolean(pointsField);
+  // "create": send points with the new issue. "edit": the create screen lacks the field, so set it
+  // right after creating. "none": the field cannot be set at all.
+  let mode = pointsField ? "create" : "none";
   log(`Types: ${epicName} / ${ticketName}. Points field: ${pointsField ? `${pointsField.name} (${pointsField.id})` : "not found, points skipped"}`);
+
+  const isFieldError = (err) => pointsField && String(err.message).includes(pointsField.id);
+
+  async function setPoints(key, points) {
+    if (points == null || mode === "none") return;
+    try {
+      await jira(`/issue/${key}`, { method: "PUT", body: JSON.stringify({ fields: { [pointsField.id]: points } }) });
+      if (mode === "create") mode = "edit";
+    } catch (err) {
+      if (!isFieldError(err)) throw err;
+      mode = "none";
+      log(`! "${pointsField.name}" can be set neither on create nor on edit: add it to the issue layout, then run again with --fix-points.`);
+    }
+  }
 
   async function create(extra, points) {
     const fieldsBody = { project: { key: project }, ...extra };
-    if (points != null && usePoints) fieldsBody[pointsField.id] = points;
+    const inline = points != null && mode === "create";
+    if (inline) fieldsBody[pointsField.id] = points;
+    let issue;
     try {
-      return await jira("/issue", { method: "POST", body: JSON.stringify({ fields: fieldsBody }) });
+      issue = await jira("/issue", { method: "POST", body: JSON.stringify({ fields: fieldsBody }) });
     } catch (err) {
-      if (points != null && usePoints && String(err.message).includes(pointsField.id)) {
-        log(`! "${pointsField.name}" is not on the create screen: creating without points. Add it to the screen and set points later.`);
-        usePoints = false;
-        return create(extra, null);
-      }
-      throw err;
+      if (!inline || !isFieldError(err)) throw err;
+      log(`  (create screen lacks "${pointsField.name}": setting points after creating)`);
+      mode = "edit";
+      return create(extra, points);
     }
+    if (points != null && !inline) await setPoints(issue.key, points);
+    return issue;
   }
 
   let made = 0;
@@ -68,7 +86,10 @@ export async function importPlan({ jira, epics, project, epicType, ticketType, s
     }
     for (const t of epic.tickets) {
       const id = `${epic.title}/${t.title}`;
-      if (state[id]) continue;
+      if (state[id]) {
+        if (fixPoints) await setPoints(state[id], t.points);
+        continue;
+      }
       if (made >= max) return made;
       const r = await create(
         { issuetype: { name: ticketName }, summary: t.title, parent: { key: epicKey }, description: ticketDescription(t) },
