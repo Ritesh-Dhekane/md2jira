@@ -49,7 +49,8 @@ node bin/md2jira.mjs plan.md --apply                    # everything
 | Option | Meaning |
 |---|---|
 | `--apply` | Actually create the issues. Without it nothing is written. |
-| `--only "text"` | Only epics whose title contains the text. |
+| `--only "text"` | Only the epic whose title is, or starts with, the text as whole words (`E1` does not match `E10`). |
+| `--fix-points` | Also set story points on tickets created by an earlier run. |
 | `--max N` | Stop after creating N issues. |
 | `--config file` | Config path (default `md2jira.config.json` in the current folder). |
 | `--state file` | Where created keys are remembered (default `.md2jira-state.json`). |
@@ -61,8 +62,9 @@ was already created are not pushed to Jira.
 
 - Works with team-managed and company-managed Jira Cloud spaces. Tickets are linked to their epic with the
   `parent` field.
-- If the story-points field is not on the space's create screen, tickets are created without points and a
-  warning tells you to add the field.
+- If the story-points field is not on the space's create screen, points are set right after each ticket is
+  created. If Jira refuses that too, tickets are created without points; add the field to the issue layout and
+  run again with `--fix-points`.
 - The token is only ever read from the environment or `.env`. Keep `.env` out of version control.
 
 ## Development
