@@ -2,6 +2,8 @@
 
 Create Jira Cloud epics and tickets from a Markdown plan. No dependencies, Node 22 or newer.
 
+Docs and an animated demo: <https://ritesh-dhekane.github.io/md2jira/>
+
 Write your plan once as Markdown, check it with a dry run, then create every epic and ticket in one go,
 with acceptance criteria in the description and sizes turned into story points.
 
